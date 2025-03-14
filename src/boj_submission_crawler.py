@@ -31,9 +31,8 @@ def login(boj_id, boj_pwd):
         driver.quit()
         return False
 
-def fetch_submission_status(boj_id):
-    status_url = f"{BASE_URL}/status?user_id={boj_id}&result_id=4"
-    driver.get(status_url)
+def fetch_url(url):
+    driver.get(url)
     time.sleep(3)  # 페이지 로드 대기
 
     page_source = driver.page_source
@@ -76,6 +75,26 @@ def parse_submission_list(html_content):
     
     return submission_list
 
+def parse_source_code(html_content):
+    soup = BeautifulSoup(html_content, "html.parser")
+
+    code_box = soup.find("textarea", {"class": "codemirror-textarea"})
+    source_code = code_box.text.strip() if code_box else "코드 없음"
+
+    return source_code
+
+def load_submission_status(boj_id):
+    status_url = f"{BASE_URL}/status?user_id={boj_id}&result_id=4"
+    html_content = fetch_url(status_url)
+    submission_list = parse_submission_list(html_content)
+    return submission_list
+
+def load_source_code(submission_id):
+    status_url = f"{BASE_URL}/source/{submission_id}"
+    html_content = fetch_url(status_url)
+    source_code = parse_source_code(html_content)
+    return source_code
+
 if __name__ == '__main__':
     import os
     from dotenv import load_dotenv
@@ -86,10 +105,6 @@ if __name__ == '__main__':
     boj_pwd = os.getenv("BOJ_PWD")
 
     if login(boj_id, boj_pwd):
-        text = fetch_submission_status(boj_id)
-        submission_list = parse_submission_list(text)
-
-        for pid, info in submission_list.items():
-            print(f"{pid}: {info}")
+        submission_list = load_submission_status(boj_id)
     
     driver.quit()
