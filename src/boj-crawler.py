@@ -15,8 +15,7 @@ def login(boj_id, boj_pwd):
                'login_password': boj_pwd}
     
     res = session.post(url=login_url, data=payload, headers=headers)
-    print("res:", res)
-    print("res.status_code:", res.status_code)
+    
     if res.status_code == 200:
         print(boj_id, "로그인 성공")
         return True
@@ -27,16 +26,48 @@ def login(boj_id, boj_pwd):
 def getStatus(boj_id):
     status_url = f"{BASE_URL}/status?user_id={boj_id}&result_id=4"
     res = session.get(status_url, headers=headers)
-     
-    print("res", res)
-    print("res.status_code", res.status_code)
-    print(res.text)
+    
     if res.status_code == 200:
         print(boj_id, "조회 성공")
-        return True
+        return res.text
     else:
         print(res.status_code, "조회 실패")
-        return False
+        return None
+
+def getInfo(cols):
+    submission_id = cols[0].text.strip()  # 제출 ID
+    user_id = cols[1].find("a").text.strip()  # 유저 아이디
+    problem_id = cols[2].find("a").text.strip()  # 문제 번호
+    problem_title = cols[2].find("a").get("title", "").strip()  # 문제 제목
+    result = cols[3].find("span").text.strip()  # 결과 (맞았습니다!! 등)
+    memory = cols[4].text.strip() + "KB"  # 메모리 사용량
+    time = cols[5].text.strip() + "ms"  # 실행 시간
+    language = cols[6].text.strip()  # 사용 언어
+    code_length = cols[7].text.strip() + "B"  # 코드 길이
+
+    return {"submission_id": submission_id,
+            "user_id": user_id,
+            "problem_id": problem_id,
+            "problem_title": problem_title,
+            "result": result,
+            "memory": memory,
+            "time": time,
+            "language": language,
+            "code_length": code_length,
+            }
+
+def extractSubmission(text):
+    soup = BeautifulSoup(text, "html.parser")
+
+    submission_list = {}
+    for row in soup.select("tr"):
+        cols = row.find_all("td")
+        if len(cols) == 0: continue
+        
+        info = getInfo(cols)
+        submission_list[info["problem_id"]] = info
+    
+    return submission_list
 
 if __name__ ==  '__main__':
     import os
@@ -48,4 +79,5 @@ if __name__ ==  '__main__':
     boj_pwd = os.getenv("BOJ_PWD")
 
     if login(boj_id, boj_pwd):
-        getStatus(boj_id)
+        text = getStatus(boj_id)
+        extractSubmission(text)
