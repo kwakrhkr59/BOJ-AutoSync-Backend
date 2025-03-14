@@ -6,7 +6,6 @@ import time
 
 BASE_URL = "https://www.acmicpc.net"
 
-# Selenium WebDriver 설정
 options = webdriver.ChromeOptions()
 # options.add_argument("--headless")  # GUI 없이 실행
 driver = webdriver.Chrome(options=options)
@@ -32,7 +31,7 @@ def login(boj_id, boj_pwd):
         driver.quit()
         return False
 
-def get_status(boj_id):
+def fetch_submission_status(boj_id):
     status_url = f"{BASE_URL}/status?user_id={boj_id}&result_id=4"
     driver.get(status_url)
     time.sleep(3)  # 페이지 로드 대기
@@ -40,16 +39,16 @@ def get_status(boj_id):
     page_source = driver.page_source
     return page_source
 
-def get_info(cols):
-    submission_id = cols[0].text.strip()  # 제출 ID
-    user_id = cols[1].find("a").text.strip()  # 사용자 아이디
-    problem_id = cols[2].find("a").text.strip()  # 문제 번호
-    problem_title = cols[2].find("a").get("title", "").strip()  # 문제 제목
-    result = cols[3].find("span").text.strip()  # 채점 결과
-    memory = cols[4].text.strip() + "KB"  # 메모리 사용량
-    time = cols[5].text.strip() + "ms"  # 실행 시간
-    language = cols[6].text.strip()  # 사용 언어
-    code_length = cols[7].text.strip() + "B"  # 코드 길이
+def parse_submission_row(columns):
+    submission_id = columns[0].text.strip()  # 제출 ID
+    user_id = columns[1].find("a").text.strip()  # 사용자 아이디
+    problem_id = columns[2].find("a").text.strip()  # 문제 번호
+    problem_title = columns[2].find("a").get("title", "").strip()  # 문제 제목
+    result = columns[3].find("span").text.strip()  # 채점 결과
+    memory = columns[4].text.strip() + "KB"  # 메모리 사용량
+    time = columns[5].text.strip() + "ms"  # 실행 시간
+    language = columns[6].text.strip()  # 사용 언어
+    code_length = columns[7].text.strip() + "B"  # 코드 길이
 
     return {
         "submission_id": submission_id,
@@ -63,8 +62,8 @@ def get_info(cols):
         "code_length": code_length,
     }
 
-def extract_submission(text):
-    soup = BeautifulSoup(text, "html.parser")
+def parse_submission_list(html_content):
+    soup = BeautifulSoup(html_content, "html.parser")
     submission_list = {}
 
     for row in soup.select("tr"):
@@ -72,7 +71,7 @@ def extract_submission(text):
         if len(cols) == 0:
             continue
         
-        info = get_info(cols)
+        info = parse_submission_row(cols)
         submission_list[info["problem_id"]] = info
     
     return submission_list
@@ -87,8 +86,8 @@ if __name__ == '__main__':
     boj_pwd = os.getenv("BOJ_PWD")
 
     if login(boj_id, boj_pwd):
-        text = get_status(boj_id)
-        submission_list = extract_submission(text)
+        text = fetch_submission_status(boj_id)
+        submission_list = parse_submission_list(text)
 
         for pid, info in submission_list.items():
             print(f"{pid}: {info}")
