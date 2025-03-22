@@ -4,13 +4,13 @@ def parse_submission_row(columns):
     submission_id = columns[0].text.strip()  # 제출 ID
     user_id = columns[1].find("a").text.strip()  # 사용자 아이디
     problem_id = columns[2].find("a").text.strip()  # 문제 번호
-    problem_title = columns[2].find("a").get("title", "").strip()  # 문제 제목
+    problem_title = columns[2].find("a").get("data-original-title", "").strip()  # 문제 제목
     result = columns[3].find("span").text.strip()  # 채점 결과
     memory = columns[4].text.strip() + "KB"  # 메모리 사용량
     time = columns[5].text.strip() + "ms"  # 실행 시간
     language = columns[6].text.strip()  # 사용 언어
     code_length = columns[7].text.strip() + "B"  # 코드 길이
-
+    print(problem_title)
     return {
         "submission_id": submission_id,
         "user_id": user_id,
@@ -25,7 +25,7 @@ def parse_submission_row(columns):
 
 def parse_submission_list(html_content):
     soup = BeautifulSoup(html_content, "html.parser")
-    submission_list = {}
+    submission_list = []
 
     for row in soup.select("tr"):
         cols = row.find_all("td")
@@ -33,7 +33,7 @@ def parse_submission_list(html_content):
             continue
         
         info = parse_submission_row(cols)
-        submission_list[info["problem_id"]] = info
+        submission_list.append(info)  # 딕셔너리 대신 배열에 추가
     
     return submission_list
 
